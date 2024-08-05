@@ -1,0 +1,51 @@
+name: test
+
+on:
+  workflow_dispatch:
+    inputs:
+      react-native-version:
+        description: The React Native version (semver) to use when testing Hermes
+        required: true
+        type: string
+        default: latest
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 🏗 Setup repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: true
+
+      - name: 🏗 Setup project
+        uses: ./.github/actions/setup-project
+
+      - name: 🏗 Setup Hermes
+        uses: ./.github/actions/setup-hermes
+        id: hermes
+        with:
+          react-native-version: ${{ github.event.inputs.react-native-version }}
+
+      - name: 📦 Output versions
+        run: |
+          echo "React Native version: ${{ steps.hermes.outputs.react-native-version }}"
+          echo "REACT_NATIVE_VERSION=${{ steps.hermes.outputs.react-native-version }}" >> $GITHUB_ENV
+          echo "Hermes commit: ${{ steps.hermes.outputs.hermes-commit }}"
+          echo "HERMES_COMMIT=${{ steps.hermes.outputs.hermes-commit }}" >> $GITHUB_ENV
+
+      - name: 🧪 Test Hermes ${{ steps.hermes.outputs.hermes-commit }}
+        timeout-minutes: 120
+        run: bun run test:hermes
+
+      - name: 📊 Commit results
+        run: |
+          git config --global user.name 'GLaDOS'
+          git config --global user.email 'github+bot@cedric.dev'
+          git pull -r
+          git add ./_results
+          git commit -am "chore(result): add test result for Hermes ${{ steps.hermes.outputs.hermes-commit }}"
+          git push

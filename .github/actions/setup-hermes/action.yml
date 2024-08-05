@@ -1,0 +1,57 @@
+name: Setup Hermes
+description: Prepare and install the Hermes-related tooling
+
+inputs:
+  react-native-version:
+    description: Version of React Native to use, when setting up Hermes
+    default: latest
+
+  hermes-cache:
+    description: Enable the hermes build cache
+    default: true
+
+outputs:
+  react-native-version:
+    description: The exact React Native version that was resolved
+    value: ${{ inputs.versions.outputs.react-native-version }}
+  hermes-commit:
+    description: The Hermes commit that was found and checked out
+    value: ${{ steps.versions.outputs.hermes-commit }}
+
+runs:
+  using: composite
+  steps:
+    - name: 🔍 Find React Native and Hermes versions
+      id: versions
+      run: |
+        echo "Hermes commit=$(bun run resolve:hermes ${{ inputs.react-native-version }})"
+        echo "hermes-commit=$(bun run resolve:hermes ${{ inputs.react-native-version }})" >> "$GITHUB_OUTPUT"
+        echo "React Native Version=$(bun run resolve:react-native ${{ inputs.react-native-version }})"
+        echo "react-native-version=$(bun run resolve:react-native ${{ inputs.react-native-version }})" >> "$GITHUB_OUTPUT"
+      shell: bash
+
+    # See: https://github.com/facebook/hermes/blob/de90d056fac0e73d084da7c1ddf964ae9ed7bdb6/.github/workflows/build.yml#L47
+    - name: 🏗 Setup CMake for Linux
+      if: ${{ runner.os == 'Linux' }}
+      run: |
+        sudo apt update
+        sudo apt install -y git openssh-client cmake build-essential libreadline-dev libicu-dev zip python3
+      shell: bash
+
+    - name: ♻️ Restore Hermes cache
+      uses: actions/cache/restore@v4
+      with:
+        key: hermes-${{ runner.os }}-${{ steps.versions.outputs.hermes-commit }}
+        path: |
+          hermes/build/**
+
+    - name: 👷 Build Hermes
+      run: bun run build:hermes "${{ steps.versions.outputs.hermes-commit }}"
+      shell: bash
+
+    - name: ♻️ Store Hermes cache
+      uses: actions/cache/save@v4
+      with:
+        key: hermes-${{ runner.os }}-${{ steps.versions.outputs.hermes-commit }}
+        path: |
+          hermes/build/**

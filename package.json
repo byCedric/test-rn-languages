@@ -1,0 +1,19 @@
+{
+  "name": "@bycedric/hermes-conformance",
+  "version": "0.0.0",
+  "scripts": {
+    "postinstall": "patch-package",
+    "build:hermes": "bun ./scripts/hermes-build.ts",
+    "test:hermes": "bun ./scripts/hermes-test.ts",
+    "test:node": "test262-harness 'test262/test/language/**/*.js' --threads 16 --reporter json > ./node-test.json",
+    "resolve:hermes": "bun ./scripts/resolve-hermes-commit.ts",
+    "resolve:react-native": "bun ./scripts/resolve-react-native-version.ts"
+  },
+  "dependencies": {
+    "patch-package": "^8.0.0",
+    "test262-harness": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "20"
+  }
+}
